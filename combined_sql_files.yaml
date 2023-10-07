@@ -1,0 +1,64 @@
+filename: final_orders_customers.sql
+query: |-
+  with order_items_customer as (
+      select * from `rbdatahub`.`core_schema`.`order_items_product_dept`
+      left join `rbdatahub`.`core_schema`.`order_customer`
+          on order_item_order_id == order_id
+  )
+  ---select * from order_items_customer;
+  select
+      order_item_id,
+      order_item_order_id,
+      order_item_product_id,
+      order_item_quantity,
+      order_item_subtotal,
+      order_item_product_price,
+      order_date,
+      order_customer_id,
+      order_status,
+      customer_fname,
+      customer_lname,
+      customer_state,
+      customer_zipcode,
+      product_name,
+      category_name,
+      department_name
+  from order_items_customer;
+---
+filename: order_customer.sql
+query: |-
+  with order_customer as (
+      select * from `rbdatahub`.`raw_schema`.`orders`
+      left join `rbdatahub`.`raw_schema`.`customers`
+          on order_customer_id == customer_id
+  )
+  select * from order_customer
+---
+filename: order_items_product_dept.sql
+query: "with categories_dept as (\nselect * from `rbdatahub`.`raw_schema`.`categories`\
+  \ \nleft join `rbdatahub`.`raw_schema`.`departments` \non category_department_id\
+  \ == department_id\n),\norder_items_product as (\nselect * from `rbdatahub`.`raw_schema`.`order_items`\
+  \ \nleft join `rbdatahub`.`raw_schema`.`products` \non order_item_product_id ==\
+  \ product_id\n),\norder_items_product_dept as (\nselect * from order_items_product\n\
+  left join categories_dept\non order_items_product.product_category_id == categories_dept.category_id\n\
+  )\nselect * from order_items_product_dept;"
+---
+filename: transactions.sql
+query: |-
+  select
+      *,
+          'incremental'
+       as build_source,
+      'f1e5ef90-86a0-445f-97a3-2143ca2491cf' as invocation_id
+  from `rbdatahub`.`raw_schema`.`transactions`
+      where txn_date > (select max(txn_date) from `rbdatahub`.`core_schema`.`transactions`)
+---
+filename: transactions_part.sql
+query: |-
+  select
+      *,
+          'incremental'
+       as build_source,
+      'f1e5ef90-86a0-445f-97a3-2143ca2491cf' as invocation_id
+  from `rbdatahub`.`raw_schema`.`transactions_part`
+      where txn_date > (select max(txn_date) from `rbdatahub`.`core_schema`.`transactions_part`)
